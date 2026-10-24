@@ -40,6 +40,14 @@ export async function findById(id: number, db: Queryable = pool): Promise<Bookin
   return rows[0] ?? null;
 }
 
+export async function findByIdForUpdate(id: number, db: PoolConnection): Promise<Booking | null> {
+  const [rows] = await db.query<(Booking & RowDataPacket)[]>(
+    `SELECT ${COLUMNS} FROM bookings WHERE id = ? FOR UPDATE`,
+    [id],
+  );
+  return rows[0] ?? null;
+}
+
 // Only for rows written earlier in the same transaction, where a missing row is a bug, not a 404.
 export async function getById(id: number, db: PoolConnection): Promise<Booking> {
   const booking = await findById(id, db);
@@ -71,6 +79,14 @@ export async function insert(booking: NewBooking, db: PoolConnection): Promise<n
     [booking.artistId, booking.clientId, booking.start, booking.end, booking.notes],
   );
   return result.insertId;
+}
+
+export async function updateStatus(
+  id: number,
+  status: BookingStatus,
+  db: PoolConnection,
+): Promise<void> {
+  await db.query('UPDATE bookings SET status = ? WHERE id = ?', [status, id]);
 }
 
 export async function recordStatusChange(

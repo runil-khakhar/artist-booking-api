@@ -1,7 +1,9 @@
 import { withTransaction } from '../../db/mysql';
 import { HttpError } from '../../shared/http-error';
+import type { AuthUser } from '../auth/token';
 import * as userRepository from '../users/user.repository';
-import { MAX_DURATION_DAYS, MAX_YEARS_AHEAD } from './booking.constants';
+import { assertTransition } from './booking-status';
+import { MAX_DURATION_DAYS, MAX_YEARS_AHEAD, type BookingStatus } from './booking.constants';
 import * as bookingRepository from './booking.repository';
 import type { Booking, NewBooking } from './booking.repository';
 
@@ -26,6 +28,15 @@ function assertValidTimeWindow(start: Date, end: Date): void {
   }
 }
 
+function assertParticipant(booking: Booking, user: AuthUser): void {
+  if (user.role === 'artist' && booking.artist_id !== user.id) {
+    throw new HttpError(403, 'Artists can only update bookings assigned to them');
+  }
+  if (user.role === 'client' && booking.client_id !== user.id) {
+    throw new HttpError(403, 'Clients can only update their own bookings');
+  }
+}
+
 export async function createBooking(booking: NewBooking): Promise<Booking> {
   assertValidTimeWindow(booking.start, booking.end);
 
@@ -42,6 +53,49 @@ export async function createBooking(booking: NewBooking): Promise<Booking> {
     const bookingId = await bookingRepository.insert(booking, db);
     await bookingRepository.recordStatusChange(
       { bookingId, from: null, to: 'pending', changedBy: booking.clientId },
+      db,
+    );
+    return bookingRepository.getById(bookingId, db);
+  });
+}
+
+export async function updateBookingStatus(
+  bookingId: number,
+  status: BookingStatus,
+  user: AuthUser,
+): Promise<Booking> {
+  const booking = await bookingRepository.findById(bookingId);
+  if (!booking) {
+    throw new HttpError(404, `Booking ${bookingId} not found`);
+  }
+  assertParticipant(booking, user);
+
+  return withTransaction(async (db) => {
+    // Same lock order as createBooking (artist, then booking), so the two can't deadlock.
+    await userRepository.lockArtist(booking.artist_id, db);
+    const current = await bookingRepository.findByIdForUpdate(bookingId, db);
+    if (!current) {
+      throw new HttpError(404, `Booking ${bookingId} not found`);
+    }
+
+    assertTransition(current.status, status, user.role);
+
+    // Two pending requests for the same slot could otherwise both be confirmed later.
+    if (status === 'confirmed') {
+      const slot = {
+        artistId: current.artist_id,
+        start: current.event_start,
+        end: current.event_end,
+        excludeBookingId: current.id,
+      };
+      if (await bookingRepository.hasBlockingOverlap(slot, db)) {
+        throw new HttpError(409, OVERLAP_MESSAGE);
+      }
+    }
+
+    await bookingRepository.updateStatus(bookingId, status, db);
+    await bookingRepository.recordStatusChange(
+      { bookingId, from: current.status, to: status, changedBy: user.id },
       db,
     );
     return bookingRepository.getById(bookingId, db);

@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { BOOKING_STATUSES } from './booking.constants';
 
 const POSITIVE_INT = { error: 'must be a positive integer' };
 
@@ -24,6 +25,13 @@ export const createBookingSchema = z.object(
       .trim()
       .min(1, { error: 'must be a non-empty string' })
       .max(1000, { error: 'must be 1000 characters or fewer' }),
+  },
+  { error: 'Request body must be a JSON object' },
+);
+
+export const updateStatusSchema = z.object(
+  {
+    status: z.enum(BOOKING_STATUSES, { error: `must be one of: ${BOOKING_STATUSES.join(', ')}` }),
   },
   { error: 'Request body must be a JSON object' },
 );

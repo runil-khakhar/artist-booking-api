@@ -1,8 +1,9 @@
 import type { Request, Response } from 'express';
 import { currentUser } from '../../middleware/authenticate';
 import { sendSuccess } from '../../shared/response';
+import { idParamsSchema } from '../../shared/schemas';
 import type { Booking } from './booking.repository';
-import { createBookingSchema } from './booking.schemas';
+import { createBookingSchema, updateStatusSchema } from './booking.schemas';
 import * as bookingService from './booking.service';
 
 function toBookingResponse(booking: Booking) {
@@ -31,4 +32,13 @@ export async function createBooking(req: Request, res: Response): Promise<void> 
   });
 
   sendSuccess(res, toBookingResponse(booking), 201);
+}
+
+export async function updateBookingStatus(req: Request, res: Response): Promise<void> {
+  const { id } = idParamsSchema.parse(req.params);
+  const { status } = updateStatusSchema.parse(req.body);
+
+  const booking = await bookingService.updateBookingStatus(id, status, currentUser(req));
+
+  sendSuccess(res, toBookingResponse(booking));
 }

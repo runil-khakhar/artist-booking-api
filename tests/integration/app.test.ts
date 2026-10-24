@@ -34,6 +34,13 @@ describe('app', () => {
     });
   });
 
+  it('returns 400, not 500, for a URL that cannot be decoded', async () => {
+    const res = await request(app).patch('/bookings/%E0%A4%A/status');
+
+    expect(res.status).toBe(400);
+    expect(res.body).toEqual({ success: false, data: null, error: 'Bad request' });
+  });
+
   it('returns 413 for a body over the size limit', async () => {
     const res = await request(app)
       .post('/health')
