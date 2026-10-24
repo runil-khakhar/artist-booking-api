@@ -72,6 +72,14 @@ export async function hasBlockingOverlap(slot: TimeSlot, db: PoolConnection): Pr
   return rows.length > 0;
 }
 
+export async function findCompletedIdsByArtist(artistId: number): Promise<number[]> {
+  const [rows] = await pool.query<({ id: number } & RowDataPacket)[]>(
+    "SELECT id FROM bookings WHERE artist_id = ? AND status = 'completed'",
+    [artistId],
+  );
+  return rows.map((row) => row.id);
+}
+
 export async function insert(booking: NewBooking, db: PoolConnection): Promise<number> {
   const [result] = await db.query<ResultSetHeader>(
     `INSERT INTO bookings (artist_id, client_id, status, event_start, event_end, notes)

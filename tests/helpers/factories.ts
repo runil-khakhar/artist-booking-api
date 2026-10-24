@@ -3,6 +3,7 @@ import bcrypt from 'bcrypt';
 import type { ResultSetHeader } from 'mysql2/promise';
 import { config } from '../../src/config';
 import { pool } from '../../src/db/mysql';
+import { Review } from '../../src/modules/artists/review.model';
 import type { BookingStatus } from '../../src/modules/bookings/booking.constants';
 import type { Role } from '../../src/modules/users/roles';
 
@@ -57,4 +58,15 @@ export async function createBooking(
     [artist.id, client.id, status, start, end ?? new Date(start.getTime() + 3 * HOUR), 'Test'],
   );
   return { id: result.insertId, artistId: artist.id, clientId: client.id };
+}
+
+export async function createReview(booking: TestBooking, score: number, createdAt = new Date()) {
+  return Review.create({
+    bookingId: booking.id,
+    artistId: booking.artistId,
+    clientId: booking.clientId,
+    score,
+    comment: `Gave it a ${score}`,
+    createdAt,
+  });
 }

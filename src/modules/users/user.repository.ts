@@ -18,6 +18,19 @@ export async function findCredentialsByEmail(email: string): Promise<UserCredent
   return rows[0] ?? null;
 }
 
+export interface ArtistSummary {
+  id: number;
+  name: string;
+}
+
+export async function findArtistById(id: number): Promise<ArtistSummary | null> {
+  const [rows] = await pool.query<(ArtistSummary & RowDataPacket)[]>(
+    "SELECT id, name FROM users WHERE id = ? AND role = 'artist'",
+    [id],
+  );
+  return rows[0] ?? null;
+}
+
 // Holds the artist's row until the transaction ends, so schedule changes for one artist run one at
 // a time. Lock order is always artist, then booking; never lock a client's row this way.
 export async function lockArtist(id: number, db: PoolConnection): Promise<boolean> {
