@@ -1,3 +1,4 @@
+import type { RowDataPacket } from 'mysql2/promise';
 import { config } from '../../src/config';
 import { pool } from '../../src/db/mysql';
 import { ArtistProfile } from '../../src/modules/artists/artist-profile.model';
@@ -15,4 +16,13 @@ export async function resetDatabases(): Promise<void> {
     await pool.query(`DELETE FROM ${table}`);
   }
   await Promise.all([Review.deleteMany({}), ArtistProfile.deleteMany({})]);
+}
+
+export async function getStatusHistory(bookingId: number) {
+  const [rows] = await pool.query<RowDataPacket[]>(
+    `SELECT from_status, to_status, changed_by FROM booking_status_history
+      WHERE booking_id = ? ORDER BY id`,
+    [bookingId],
+  );
+  return rows;
 }

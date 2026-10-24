@@ -1,6 +1,15 @@
 import type { ErrorRequestHandler } from 'express';
+import { ZodError } from 'zod';
 import { HttpError } from '../shared/http-error';
 import { sendError } from '../shared/response';
+
+function describeIssues(err: ZodError): string {
+  return err.issues
+    .map((issue) =>
+      issue.path.length > 0 ? `${issue.path.join('.')} ${issue.message}` : issue.message,
+    )
+    .join('; ');
+}
 
 // What Express and body-parser throw for a bad request: malformed URL, invalid JSON, body too large.
 interface ClientError extends Error {
@@ -36,6 +45,10 @@ export const errorHandler: ErrorRequestHandler = (err, _req, res, next) => {
   }
   if (err instanceof HttpError) {
     sendError(res, err.status, err.message);
+    return;
+  }
+  if (err instanceof ZodError) {
+    sendError(res, 400, describeIssues(err));
     return;
   }
   if (isClientError(err)) {

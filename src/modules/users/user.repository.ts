@@ -1,4 +1,4 @@
-import type { RowDataPacket } from 'mysql2/promise';
+import type { PoolConnection, RowDataPacket } from 'mysql2/promise';
 import { pool } from '../../db/mysql';
 import type { Role } from './roles';
 
@@ -16,4 +16,14 @@ export async function findCredentialsByEmail(email: string): Promise<UserCredent
     [email],
   );
   return rows[0] ?? null;
+}
+
+// Holds the artist's row until the transaction ends, so schedule changes for one artist run one at
+// a time. Lock order is always artist, then booking; never lock a client's row this way.
+export async function lockArtist(id: number, db: PoolConnection): Promise<boolean> {
+  const [rows] = await db.query<RowDataPacket[]>(
+    "SELECT id FROM users WHERE id = ? AND role = 'artist' FOR UPDATE",
+    [id],
+  );
+  return rows.length > 0;
 }
