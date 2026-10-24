@@ -2,11 +2,15 @@ import request from 'supertest';
 import { app } from '../../src/app';
 
 describe('app', () => {
-  it('reports itself healthy', async () => {
+  it('reports both databases as up', async () => {
     const res = await request(app).get('/health');
 
     expect(res.status).toBe(200);
-    expect(res.body).toEqual({ success: true, data: { status: 'ok' }, error: null });
+    expect(res.body).toEqual({
+      success: true,
+      data: { status: 'ok', mysql: 'up', mongodb: 'up' },
+      error: null,
+    });
   });
 
   it('returns the standard body for an unknown route', async () => {

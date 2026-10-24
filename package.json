@@ -10,22 +10,28 @@
   },
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
-    "prestart": "npm run build",
+    "prestart": "npm run build && node dist/scripts/db-setup.js",
     "start": "node --enable-source-maps dist/server.js",
     "dev": "tsx watch src/server.ts",
+    "db:setup": "tsx src/scripts/db-setup.ts",
+    "db:seed": "tsx src/scripts/seed.ts",
     "test": "jest --runInBand",
     "typecheck": "tsc --noEmit",
     "lint": "eslint .",
     "format": "prettier --write ."
   },
   "dependencies": {
+    "bcrypt": "^6.0.0",
     "dotenv": "^18.0.9",
     "express": "^5.3.0",
     "helmet": "^8.3.0",
+    "mongoose": "^9.11.4",
+    "mysql2": "^3.24.6",
     "zod": "^4.6.7"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
+    "@types/bcrypt": "^6.0.0",
     "@types/express": "^5.0.6",
     "@types/jest": "^30.0.0",
     "@types/node": "^24.19.2",
