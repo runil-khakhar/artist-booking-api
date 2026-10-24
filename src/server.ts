@@ -18,6 +18,11 @@ async function start(): Promise<void> {
       process.exit(1);
     }
     console.log(`Artist booking API listening on http://localhost:${config.port}`);
+    if (config.jwt.isRandomSecret) {
+      console.warn(
+        'JWT_SECRET is not set, so tokens are signed with a random secret until restart.',
+      );
+    }
   });
 
   const shutdown = (signal: NodeJS.Signals) => {

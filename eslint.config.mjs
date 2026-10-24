@@ -25,6 +25,7 @@ export default defineConfig(
     // Supertest response bodies are untyped; asserting on them is the point of the tests.
     files: ['tests/**/*.ts'],
     rules: {
+      '@typescript-eslint/no-unsafe-argument': 'off',
       '@typescript-eslint/no-unsafe-assignment': 'off',
       '@typescript-eslint/no-unsafe-member-access': 'off',
     },

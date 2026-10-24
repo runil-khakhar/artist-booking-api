@@ -1,3 +1,4 @@
+import { randomBytes } from 'node:crypto';
 import path from 'node:path';
 import dotenv from 'dotenv';
 import { z } from 'zod';
@@ -22,6 +23,8 @@ const envSchema = z.object({
   MYSQL_DATABASE: fromEnv(databaseName.default('artist_booking')),
   MONGO_URI: fromEnv(z.string().default('mongodb://127.0.0.1:27017')),
   MONGO_DB: fromEnv(databaseName.default('artist_booking')),
+  JWT_SECRET: fromEnv(z.string().min(32, { error: 'must be at least 32 characters' }).optional()),
+  JWT_TTL_SECONDS: fromEnv(z.coerce.number().int().positive().default(3600)),
   SEED_USER_PASSWORD: fromEnv(
     z.string().min(8, { error: 'must be at least 8 characters' }).optional(),
   ),
@@ -36,6 +39,10 @@ if (!parsed.success) {
 }
 
 const env = parsed.data;
+if (!env.JWT_SECRET && env.NODE_ENV === 'production') {
+  throw new Error('JWT_SECRET must be set in production');
+}
+
 const isTest = env.NODE_ENV === 'test';
 // Tests get their own databases, so a test run can never wipe development data.
 const dbSuffix = isTest ? '_test' : '';
@@ -54,6 +61,11 @@ export const config = {
   mongo: {
     uri: env.MONGO_URI,
     dbName: `${env.MONGO_DB}${dbSuffix}`,
+  },
+  jwt: {
+    secret: env.JWT_SECRET ?? randomBytes(48).toString('hex'),
+    isRandomSecret: !env.JWT_SECRET,
+    ttlSeconds: env.JWT_TTL_SECONDS,
   },
   bcryptRounds: isTest ? 4 : 12,
   seedUserPassword: env.SEED_USER_PASSWORD,
